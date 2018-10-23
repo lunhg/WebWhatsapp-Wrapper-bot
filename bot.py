@@ -1,3 +1,4 @@
+
 # -*- coding: utf-8 -*-
 
 from webwhatsapi import WhatsAPIDriver
@@ -11,27 +12,32 @@ import sys
 class Bot(object):
 
   def __init__(self, **kwargs):
+    # See for selenium first
+    try:
+      os.environ["SELENIUM"]
+    except KeyError:
+      print "Please set the environment variable SELENIUM to Selenium URL"
+      sys.exit(1)
+
     self.attributes = []
     self.properties = {}
-    self.botclass = kwargs.get('botclass')
     b = kwargs.get('botname')
     c = kwargs.get('client')
     cwd = os.path.join(os.getcwd(), '_cache')
     p = os.path.abspath(cwd)
     h = kwargs.get('headless')
     self.driver = WhatsAPIDriver(client=c,
-                                 username=u,
+                                 username=b,
                                  profile=p,
                                  headless=h)
-    
 
   def setup(self, **kwargs):
-    for p in self.attributes:
-      self.getattribute(p).setup()
-
+    for p in kwargs.get('config'):
+      self.getattribute(p).setup(p)
+      
   def run(self, **kwargs):
     while True:
-      time.sleep(kwargs.frameTime)
+      time.sleep(kwargs.get('frameTime'))
       for message_group in self.driver.get_unread():
         for message in message_group.messages:
           for fn in kwargs.get('callbacks'):
@@ -40,15 +46,13 @@ class Bot(object):
   def plugin(self, **kwargs):
     try:
       name = kwargs.name.split("/").join(".")
-      print "===> plugin %s" % name 
-      sys.path.append("%s" % kwargs.path)
-      module = __import__("plugins.%s" % name)
-      __className__  = name.split(".")
-      __className__ = __className__[len(__className__)-1]
-      __class__ = getattr(module, __className__)
+      name = name[len(name) - 1]
+      sys.path.append(kwargs.path)
+      module = __import__(name)
+      __class__ = getattr(module, name.title())
       instance = __class__(driver=self.driver)
       self.attributes.push(name)
-      self.setattr(name_, instance)
+      self.setattr(name, instance)
       print str(self.getattribute(name))
     except Exception, e:
       print e
